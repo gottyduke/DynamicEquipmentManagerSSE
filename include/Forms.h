@@ -40,7 +40,7 @@ public:
 			auto dataHandler = RE::TESDataHandler::GetSingleton();
 			auto modInfo = dataHandler->LookupLoadedModByName(_pluginName.c_str());
 			if (modInfo) {
-				_loadedFormID = _rawFormID + (modInfo->modIndex << (3 * 8));
+				_loadedFormID = _rawFormID + (modInfo->compileIndex << (3 * 8));
 			} else {
 				_rawFormID = kInvalid;
 				return 0;

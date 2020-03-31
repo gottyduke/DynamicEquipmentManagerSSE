@@ -1,7 +1,5 @@
 #pragma once
 
-#include "skse64/PluginAPI.h"  // SKSETaskInterface
-
 #include "RE/Skyrim.h"
 
 

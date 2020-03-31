@@ -1,12 +1,12 @@
 #pragma once
 
-#include "skse64/gamethreads.h"  // TaskDelegate
+#include "skse64/gamethreads.h"
 
 #include "ISerializableForm.h"  // ISerializableForm, kInvalid
 #include "PlayerUtil.h"  // InventoryChangesVisitor
 
 #include "RE/Skyrim.h"
-
+#include "SKSE/API.h"
 
 namespace Ammo
 {
@@ -68,7 +68,7 @@ namespace Ammo
 	class TESEquipEventHandler : public RE::BSTEventSink<RE::TESEquipEvent>
 	{
 	public:
-		using EventResult = RE::EventResult;
+		using EventResult = RE::BSEventNotifyControl;
 
 
 		class Visitor : public InventoryChangesVisitor
@@ -79,7 +79,7 @@ namespace Ammo
 
 
 		static TESEquipEventHandler* GetSingleton();
-		virtual EventResult ReceiveEvent(RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
+		virtual EventResult ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
 
 	protected:
 		TESEquipEventHandler() = default;

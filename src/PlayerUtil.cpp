@@ -1,7 +1,5 @@
 #include "PlayerUtil.h"
 
-#include "skse64/PluginAPI.h"  // SKSETaskInterface
-
 #include <utility>  // pair, make_pair
 #include <map>  // map
 #include <vector>  // vector
@@ -9,6 +7,7 @@
 #include "Forms.h"  // WerewolfBeastRace, DLC1VampireBeastRace
 
 #include "RE/Skyrim.h"
+#include "SKSE/API.h"
 
 
 void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
@@ -18,8 +17,8 @@ void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
 	std::map<FormID, std::pair<RE::InventoryEntryData*, Count>> invMap;
 	if (changes) {
 		for (auto& entry : *changes->entryList) {
-			if (entry && entry->type) {
-				invMap.emplace(entry->type->formID, std::make_pair(entry, entry->countDelta));
+			if (entry && entry->GetObject()) {
+				invMap.emplace(entry->GetObject()->GetFormID(), std::make_pair(entry, entry->countDelta));
 			}
 		}
 	}
@@ -27,22 +26,23 @@ void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
 	auto container = player->GetContainer();
 	std::vector<RE::InventoryEntryData*> heapList;
 	if (container) {
-		container->ForEach([&](RE::TESContainer::Entry* a_entry) -> bool
-		{
-			if (a_entry->form) {
-				auto& it = invMap.find(a_entry->form->formID);
-				if (it != invMap.end()) {
-					if (!a_entry->form->IsGold()) {
-						it->second.second += a_entry->count;
+		container->ForEachContainerObject([&](RE::ContainerObject* a_cnto) -> bool
+			{
+				if (a_cnto->obj) {
+					auto& it = invMap.find(a_cnto->obj->GetFormID());
+					if (it != invMap.end()) {
+						if (!a_cnto->obj->IsGold()) {
+							it->second.second += a_cnto->count;
+						}
 					}
-				} else {
-					RE::InventoryEntryData* entryData = new RE::InventoryEntryData(a_entry->form, a_entry->count);
-					heapList.push_back(entryData);
-					invMap.emplace(a_entry->form->formID, std::make_pair(entryData, entryData->countDelta));
+					else {
+						RE::InventoryEntryData* entryData = new RE::InventoryEntryData(a_cnto->obj, a_cnto->count);
+						heapList.push_back(entryData);
+						invMap.emplace(a_cnto->obj->GetFormID(), std::make_pair(entryData, entryData->countDelta));
+					}
 				}
-			}
-			return true;
-		});
+				return true;
+			});
 	}
 
 	for (auto& item : invMap) {
@@ -66,12 +66,12 @@ bool SinkAnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>*
 	player->GetAnimationGraphManager(graphManager);
 	if (graphManager) {
 		bool sinked = false;
-		for (auto& animationGraph : graphManager->animationGraphs) {
+		for (auto& animationGraph : graphManager->graphs) {
 			if (sinked) {
 				break;
 			}
-			RE::BSTEventSource<RE::BSAnimationGraphEvent>* eventSource = animationGraph->GetBSAnimationGraphEventSource();
-			for (auto& sink : eventSource->eventSinks) {
+			RE::BSTEventSource<RE::BSAnimationGraphEvent>* eventSource = animationGraph->GetEventSource<RE::BSAnimationGraphEvent>();
+			for (auto& sink : eventSource->sinks) {
 				if (sink == a_sink) {
 					sinked = true;
 					break;
@@ -79,7 +79,7 @@ bool SinkAnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>*
 			}
 		}
 		if (!sinked) {
-			graphManager->animationGraphs.front()->GetBSAnimationGraphEventSource()->AddEventSink(a_sink);
+			graphManager->graphs.front()->GetEventSource<RE::BSAnimationGraphEvent>()->AddEventSink(a_sink);
 			return true;
 		}
 	}

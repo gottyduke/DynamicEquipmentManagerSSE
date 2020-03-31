@@ -2,19 +2,19 @@
 
 #include "Json2Settings.h"
 
+namespace J2S = Json2Settings;
 
-class Settings : public Json2Settings::Settings
+class Settings
 {
 public:
 	Settings() = delete;
 
-	static bool	loadSettings(bool a_dumpParse = false);
+	static bool LoadSettings(bool a_dumpParse = false);
 
-
-	static bSetting	manageAmmo;
-	static bSetting	manageHelmet;
-	static bSetting	manageShield;
+	static J2S::bSetting	manageAmmo;
+	static J2S::bSetting	manageHelmet;
+	static J2S::bSetting	manageShield;
 
 private:
-	static constexpr char FILE_NAME[] = "Data\\SKSE\\Plugins\\DynamicEquipmentManagerSSE.json";
+	static inline constexpr char FILE_NAME[] = "Data\\SKSE\\Plugins\\DynamicEquipmentManagerSSE.json";
 };

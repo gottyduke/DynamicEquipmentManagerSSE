@@ -1,6 +1,4 @@
-﻿#include "skse64_common/skse_version.h"  // RUNTIME_VERSION
-
-#include <string>  // string
+﻿#include <string>  // string
 
 #include "Ammo.h"  // Ammo, TESEquipEventHandler
 #include "Helmet.h"  // Helmet, BSAnimationGraphEventHandler
@@ -11,7 +9,6 @@
 
 #include "SKSE/API.h"
 #include "RE/Skyrim.h"
-
 
 namespace
 {
@@ -35,6 +32,9 @@ namespace
 		for (std::size_t i = 0, j = SIZE - 2; i < SIZE - 1; ++i, --j) {
 			sig[j] = iter[i];
 		}
+
+		_DMESSAGE(sig.c_str());
+
 		return sig;
 	}
 
@@ -109,11 +109,11 @@ namespace
 		_MESSAGE("Finished loading data");
 	}
 
-
+	// TODO: stuck in infi-loop
 	class TESObjectLoadedEventHandler : public RE::BSTEventSink<RE::TESObjectLoadedEvent>
 	{
 	public:
-		using EventResult = RE::EventResult;
+		using EventResult = RE::BSEventNotifyControl;
 
 
 		static TESObjectLoadedEventHandler* GetSingleton()
@@ -123,7 +123,7 @@ namespace
 		}
 
 
-		virtual EventResult ReceiveEvent(RE::TESObjectLoadedEvent* a_event, RE::BSTEventSource<RE::TESObjectLoadedEvent>* a_eventSource) override
+		virtual EventResult ProcessEvent(const RE::TESObjectLoadedEvent* a_event, RE::BSTEventSource<RE::TESObjectLoadedEvent>* a_eventSource) override
 		{
 			if (!a_event) {
 				return EventResult::kContinue;
@@ -131,12 +131,12 @@ namespace
 
 			auto player = RE::PlayerCharacter::GetSingleton();
 			if (a_event->formID == player->formID) {
-				if (Settings::manageHelmet) {
+				if (*Settings::manageHelmet) {
 					if (SinkAnimationGraphEventHandler(Helmet::BSAnimationGraphEventHandler::GetSingleton())) {
 						_MESSAGE("Registered helmet player animation event handler");
 					}
 				}
-				if (Settings::manageShield) {
+				if (*Settings::manageShield) {
 					if (SinkAnimationGraphEventHandler(Shield::BSAnimationGraphEventHandler::GetSingleton())) {
 						_MESSAGE("Registered shield player animation event handler");
 					}
@@ -156,7 +156,7 @@ namespace
 		TESObjectLoadedEventHandler& operator=(TESObjectLoadedEventHandler&&) = delete;
 	};
 
-
+	
 	void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 	{
 		switch (a_msg->type) {
@@ -166,17 +166,17 @@ namespace
 				sourceHolder->AddEventSink(TESObjectLoadedEventHandler::GetSingleton());
 				_MESSAGE("Registered object loaded event handler");
 
-				if (Settings::manageAmmo) {
+				if (*Settings::manageAmmo) {
 					sourceHolder->AddEventSink(Ammo::TESEquipEventHandler::GetSingleton());
 					_MESSAGE("Registered ammo equip event handler");
 				}
 
-				if (Settings::manageHelmet) {
+				if (*Settings::manageHelmet) {
 					sourceHolder->AddEventSink(Helmet::TESEquipEventHandler::GetSingleton());
 					_MESSAGE("Registered helmet equip event handler");
 				}
 
-				if (Settings::manageShield) {
+				if (*Settings::manageShield) {
 					sourceHolder->AddEventSink(Shield::TESEquipEventHandler::GetSingleton());
 					_MESSAGE("Registered shield equip event handler");
 				}
@@ -195,10 +195,10 @@ extern "C" {
 		SKSE::Logger::SetFlushLevel(SKSE::Logger::Level::kDebugMessage);
 		SKSE::Logger::UseLogStamp(true);
 
-		_MESSAGE("DynamicEquipmentManagerSSE v%s", DNEM_VERSION_VERSTRING);
+		_MESSAGE("DynamicEquipmentManagerSSE - Updated v%s", DNEM_VERSION_VERSTRING);
 
 		a_info->infoVersion = SKSE::PluginInfo::kVersion;
-		a_info->name = "DynamicEquipmentManagerSSE";
+		a_info->name = "DynamicEquipmentManagerSSE-Updated";
 		a_info->version = DNEM_VERSION_MAJOR;
 
 		if (a_skse->IsEditor()) {
@@ -206,12 +206,9 @@ extern "C" {
 			return false;
 		}
 
-		switch (a_skse->RuntimeVersion()) {
-		case RUNTIME_VERSION_1_5_73:
-		case RUNTIME_VERSION_1_5_80:
-			break;
-		default:
-			_FATALERROR("Unsupported runtime version %08X!\n", a_skse->RuntimeVersion());
+		auto ver = a_skse->RuntimeVersion();
+		if (ver <= SKSE::RUNTIME_1_5_39) {
+			_FATALERROR("Unsupported runtime version %s!", ver.GetString().c_str());
 			return false;
 		}
 
@@ -227,11 +224,8 @@ extern "C" {
 			return false;
 		}
 
-		if (Settings::loadSettings()) {
+		if (Settings::LoadSettings()) {
 			_MESSAGE("Settings loaded successfully");
-#if _DEBUG
-			Settings::dump();
-#endif
 		} else {
 			_FATALERROR("Failed to load settings!\n");
 			return false;
@@ -250,7 +244,7 @@ extern "C" {
 		serialization->SetSaveCallback(SaveCallback);
 		serialization->SetLoadCallback(LoadCallback);
 
-		if (Settings::manageShield) {
+		if (*Settings::manageShield) {
 			Shield::InstallHooks();
 			_MESSAGE("Installed hooks for shield");
 		}

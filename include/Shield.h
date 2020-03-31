@@ -6,7 +6,7 @@
 #include "PlayerUtil.h"  // InventoryChangesVisitor
 
 #include "RE/Skyrim.h"
-
+#include "SKSE/API.h"
 
 namespace Shield
 {
@@ -15,9 +15,26 @@ namespace Shield
 	public:
 		static Shield* GetSingleton();
 
-		RE::TESObjectARMO* GetForm();
+		void Clear();
+		bool Save(SKSE::SerializationInterface* a_intfc, UInt32 a_type, UInt32 a_version);
+		bool Load(SKSE::SerializationInterface* a_intfc);
 
+		RE::TESObjectARMO* GetForm();
+		void SetEnchantmentForm(UInt32 a_formID);
+
+		RE::EnchantmentItem* GetEnchantmentForm();
+		UInt32 GetEnchantmentFormID();
 	protected:
+		class Enchantment : public ISerializableForm
+		{
+		public:
+			Enchantment() = default;
+			~Enchantment() = default;
+
+			RE::EnchantmentItem* GetForm();
+		};
+
+
 		Shield() = default;
 		Shield(const Shield&) = delete;
 		Shield(Shield&&) = delete;
@@ -25,6 +42,8 @@ namespace Shield
 
 		Shield& operator=(const Shield&) = delete;
 		Shield& operator=(Shield&&) = delete;
+
+		Enchantment _enchantment;
 	};
 
 
@@ -45,8 +64,8 @@ namespace Shield
 		};
 
 
-		ShieldTaskDelegate(bool a_equip);
-		virtual ~ShieldTaskDelegate() = default;
+		explicit ShieldTaskDelegate(bool a_equip);
+		~ShieldTaskDelegate() = default;
 
 		virtual void Run() override;
 		virtual void Dispose() override;
@@ -55,6 +74,32 @@ namespace Shield
 		bool _equip;
 	};
 
+
+	class DelayedShieldLocator : public TaskDelegate
+	{
+	public:
+		class Visitor : public InventoryChangesVisitor
+		{
+		public:
+			explicit Visitor(UInt32 a_formID);
+			virtual ~Visitor() = default;
+
+			virtual bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
+
+		private:
+			UInt32 _formID;
+		};
+
+
+		explicit DelayedShieldLocator(UInt32 a_formID);
+		~DelayedShieldLocator() = default;
+
+		virtual void Run() override;
+		virtual void Dispose() override;
+
+	private:
+		UInt32 _formID;
+	};
 
 	class AnimGraphSinkDelegate : public TaskDelegate
 	{
@@ -67,10 +112,10 @@ namespace Shield
 	class TESEquipEventHandler : public RE::BSTEventSink<RE::TESEquipEvent>
 	{
 	public:
-		using EventResult = RE::EventResult;
+		using EventResult = RE::BSEventNotifyControl;
 
 		static TESEquipEventHandler* GetSingleton();
-		virtual EventResult ReceiveEvent(RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
+		virtual EventResult ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
 
 	protected:
 		TESEquipEventHandler() = default;
@@ -86,10 +131,10 @@ namespace Shield
 	class BSAnimationGraphEventHandler : public RE::BSTEventSink<RE::BSAnimationGraphEvent>
 	{
 	public:
-		using EventResult = RE::EventResult;
+		using EventResult = RE::BSEventNotifyControl;
 
 		static BSAnimationGraphEventHandler* GetSingleton();
-		virtual EventResult ReceiveEvent(RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource) override;
+		virtual EventResult ProcessEvent(const RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource) override;
 
 	protected:
 		BSAnimationGraphEventHandler() = default;
