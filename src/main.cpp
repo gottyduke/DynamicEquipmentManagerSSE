@@ -2,7 +2,7 @@
 
 #include "Ammo.h"  // Ammo, TESEquipEventHandler
 #include "Helmet.h"  // Helmet, BSAnimationGraphEventHandler
-#include "PlayerUtil.h"  // SinkAnimationGraphEventHandler
+#include "PlayerUtil.h"  // AnimationGraphEventHandler
 #include "Settings.h"  // Settings
 #include "Shield.h"  // Shield, BSAnimationGraphEventHandler
 #include "version.h"  // VERSION_VERSTRING, VERSION_MAJOR
@@ -24,11 +24,11 @@ namespace
 
 	std::string DecodeTypeCode(UInt32 a_typeCode)
 	{
-		constexpr std::size_t SIZE = sizeof(UInt32);
+		constexpr auto SIZE = sizeof(UInt32);
 
 		std::string sig;
 		sig.resize(SIZE);
-		char* iter = reinterpret_cast<char*>(&a_typeCode);
+		const auto iter = reinterpret_cast<char*>(&a_typeCode);
 		for (std::size_t i = 0, j = SIZE - 2; i < SIZE - 1; ++i, --j) {
 			sig[j] = iter[i];
 		}
@@ -47,16 +47,16 @@ namespace
 			ammo->Clear();
 		}
 
-		auto helmet = Helmet::Helmet::GetSingleton();
-		if (!helmet->Save(a_intfc, kHelmet, kSerializationVersion)) {
-			_ERROR("Failed to save helmet!\n");
-			helmet->Clear();
-		}
-
 		auto shield = Shield::Shield::GetSingleton();
 		if (!shield->Save(a_intfc, kShield, kSerializationVersion)) {
 			_ERROR("Failed to save shield!\n");
 			shield->Clear();
+		}
+
+		auto helmet = Helmet::Helmet::GetSingleton();
+		if (!helmet->Save(a_intfc, kHelmet, kSerializationVersion)) {
+			_ERROR("Failed to save helmet!\n");
+			helmet->Clear();
 		}
 
 		_MESSAGE("Finished saving data");
@@ -65,12 +65,13 @@ namespace
 
 	void LoadCallback(SKSE::SerializationInterface* a_intfc)
 	{
-		auto ammo = Ammo::Ammo::GetSingleton();
-		ammo->Clear();
 		auto helmet = Helmet::Helmet::GetSingleton();
 		helmet->Clear();
+		auto ammo = Ammo::Ammo::GetSingleton();
+		ammo->Clear();
 		auto shield = Shield::Shield::GetSingleton();
 		shield->Clear();
+
 
 		UInt32 type;
 		UInt32 version;
@@ -109,8 +110,8 @@ namespace
 		_MESSAGE("Finished loading data");
 	}
 
-	// TODO: stuck in infi-loop
-	class TESObjectLoadedEventHandler : public RE::BSTEventSink<RE::TESObjectLoadedEvent>
+
+	class TESObjectLoadedEventHandler final : public RE::BSTEventSink<RE::TESObjectLoadedEvent>
 	{
 	public:
 		using EventResult = RE::BSEventNotifyControl;
@@ -119,25 +120,29 @@ namespace
 		static TESObjectLoadedEventHandler* GetSingleton()
 		{
 			static TESObjectLoadedEventHandler singleton;
-			return &singleton;
+			return std::addressof(singleton);
 		}
 
 
-		virtual EventResult ProcessEvent(const RE::TESObjectLoadedEvent* a_event, RE::BSTEventSource<RE::TESObjectLoadedEvent>* a_eventSource) override
+		auto ProcessEvent(const RE::TESObjectLoadedEvent* a_event, RE::BSTEventSource<RE::TESObjectLoadedEvent>* a_eventSource)
+		-> EventResult override
 		{
 			if (!a_event) {
 				return EventResult::kContinue;
 			}
 
-			auto player = RE::PlayerCharacter::GetSingleton();
+			const auto player = RE::PlayerCharacter::GetSingleton();
 			if (a_event->formID == player->formID) {
+
 				if (*Settings::manageHelmet) {
-					if (SinkAnimationGraphEventHandler(Helmet::BSAnimationGraphEventHandler::GetSingleton())) {
+					if (AnimationGraphEventHandler(Helmet::BSAnimationGraphEventHandler::GetSingleton())) {
 						_MESSAGE("Registered helmet player animation event handler");
 					}
 				}
+
+
 				if (*Settings::manageShield) {
-					if (SinkAnimationGraphEventHandler(Shield::BSAnimationGraphEventHandler::GetSingleton())) {
+					if (AnimationGraphEventHandler(Shield::BSAnimationGraphEventHandler::GetSingleton())) {
 						_MESSAGE("Registered shield player animation event handler");
 					}
 				}
@@ -146,17 +151,18 @@ namespace
 			return EventResult::kContinue;
 		}
 
-	protected:
-		TESObjectLoadedEventHandler() = default;
 		TESObjectLoadedEventHandler(const TESObjectLoadedEventHandler&) = delete;
 		TESObjectLoadedEventHandler(TESObjectLoadedEventHandler&&) = delete;
-		virtual ~TESObjectLoadedEventHandler() = default;
 
 		TESObjectLoadedEventHandler& operator=(const TESObjectLoadedEventHandler&) = delete;
 		TESObjectLoadedEventHandler& operator=(TESObjectLoadedEventHandler&&) = delete;
+
+	protected:
+		TESObjectLoadedEventHandler() = default;
+		virtual ~TESObjectLoadedEventHandler() = default;
 	};
 
-	
+
 	void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 	{
 		switch (a_msg->type) {
@@ -166,14 +172,14 @@ namespace
 				sourceHolder->AddEventSink(TESObjectLoadedEventHandler::GetSingleton());
 				_MESSAGE("Registered object loaded event handler");
 
-				if (*Settings::manageAmmo) {
-					sourceHolder->AddEventSink(Ammo::TESEquipEventHandler::GetSingleton());
-					_MESSAGE("Registered ammo equip event handler");
-				}
-
 				if (*Settings::manageHelmet) {
 					sourceHolder->AddEventSink(Helmet::TESEquipEventHandler::GetSingleton());
 					_MESSAGE("Registered helmet equip event handler");
+				}
+
+				if (*Settings::manageAmmo) {
+					sourceHolder->AddEventSink(Ammo::TESEquipEventHandler::GetSingleton());
+					_MESSAGE("Registered ammo equip event handler");
 				}
 
 				if (*Settings::manageShield) {
@@ -182,73 +188,78 @@ namespace
 				}
 			}
 			break;
+		default: ;
 		}
 	}
 }
 
 
-extern "C" {
-	bool SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
-	{
-		SKSE::Logger::OpenRelative(FOLDERID_Documents, L"\\My Games\\Skyrim Special Edition\\SKSE\\DynamicEquipmentManagerSSE.log");
-		SKSE::Logger::SetPrintLevel(SKSE::Logger::Level::kDebugMessage);
-		SKSE::Logger::SetFlushLevel(SKSE::Logger::Level::kDebugMessage);
-		SKSE::Logger::UseLogStamp(true);
+extern "C"
+{
+bool SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
+{
+	SKSE::Logger::OpenRelative(FOLDERID_Documents, L"\\My Games\\Skyrim Special Edition\\SKSE\\DynamicEquipmentManagerSSE.log");
+	SKSE::Logger::SetPrintLevel(SKSE::Logger::Level::kDebugMessage);
+	SKSE::Logger::SetFlushLevel(SKSE::Logger::Level::kDebugMessage);
+	SKSE::Logger::UseLogStamp(true);
 
-		_MESSAGE("DynamicEquipmentManagerSSE - Updated v%s", DNEM_VERSION_VERSTRING);
+	_MESSAGE("DynamicEquipmentManagerSSE - Updated v%s", DNEM_VERSION_VERSTRING);
 
-		a_info->infoVersion = SKSE::PluginInfo::kVersion;
-		a_info->name = "DynamicEquipmentManagerSSE-Updated";
-		a_info->version = DNEM_VERSION_MAJOR;
+	a_info->infoVersion = SKSE::PluginInfo::kVersion;
+	a_info->name = "DynamicEquipmentManagerSSE-Updated";
+	a_info->version = DNEM_VERSION_MAJOR;
 
-		if (a_skse->IsEditor()) {
-			_FATALERROR("Loaded in editor, marking as incompatible!\n");
-			return false;
-		}
+	if (a_skse->IsEditor()) {
+		_FATALERROR("Loaded in editor, marking as incompatible!\n");
+		return false;
+	}
 
-		auto ver = a_skse->RuntimeVersion();
-		if (ver <= SKSE::RUNTIME_1_5_39) {
-			_FATALERROR("Unsupported runtime version %s!", ver.GetString().c_str());
-			return false;
-		}
+	const auto ver = a_skse->RuntimeVersion();
+	if (ver <= SKSE::RUNTIME_1_5_39) {
+		_FATALERROR("Unsupported runtime version %s!", ver.GetString().c_str());
+		return false;
+	}
 
-		return true;
+	return true;
+}
+
+
+bool SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
+{
+	_MESSAGE("DynamicEquipmentManagerSSE loaded");
+
+	if (!Init(a_skse)) {
+		return false;
+	}
+
+	if (Settings::LoadSettings()) {
+		_MESSAGE("Settings loaded successfully");
+	} else {
+		_FATALERROR("Failed to load settings!\n");
+		return false;
+	}
+
+	const auto messaging = SKSE::GetMessagingInterface();
+	if (messaging->RegisterListener("SKSE", MessageHandler)) {
+		_MESSAGE("Messaging interface registration successful");
+	} else {
+		_FATALERROR("Messaging interface registration failed!\n");
+		return false;
+	}
+
+	const auto serialization = SKSE::GetSerializationInterface();
+	serialization->SetUniqueID(kDynamicEquipmentManager);
+	serialization->SetSaveCallback(SaveCallback);
+	serialization->SetLoadCallback(LoadCallback);
+
+
+	if (*Settings::manageShield) {
+		// TODO : Update the hooks with new offset
+		//Shield::InstallHooks();
+		//_MESSAGE("Installed hooks for shield");
 	}
 
 
-	bool SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
-	{
-		_MESSAGE("DynamicEquipmentManagerSSE loaded");
-
-		if (!SKSE::Init(a_skse)) {
-			return false;
-		}
-
-		if (Settings::LoadSettings()) {
-			_MESSAGE("Settings loaded successfully");
-		} else {
-			_FATALERROR("Failed to load settings!\n");
-			return false;
-		}
-
-		auto messaging = SKSE::GetMessagingInterface();
-		if (messaging->RegisterListener("SKSE", MessageHandler)) {
-			_MESSAGE("Messaging interface registration successful");
-		} else {
-			_FATALERROR("Messaging interface registration failed!\n");
-			return false;
-		}
-
-		auto serialization = SKSE::GetSerializationInterface();
-		serialization->SetUniqueID(kDynamicEquipmentManager);
-		serialization->SetSaveCallback(SaveCallback);
-		serialization->SetLoadCallback(LoadCallback);
-
-		if (*Settings::manageShield) {
-			Shield::InstallHooks();
-			_MESSAGE("Installed hooks for shield");
-		}
-
-		return true;
-	}
+	return true;
+}
 };

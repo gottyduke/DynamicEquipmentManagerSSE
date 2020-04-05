@@ -141,6 +141,7 @@ copy /y "$(TargetPath)" "D:\Program Files (x86)\Steam\steamapps\common\Skyrim Sp
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="cpp.hint" />
     <None Include="exports.def" />
   </ItemGroup>
   <ItemGroup>

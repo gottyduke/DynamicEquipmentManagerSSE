@@ -6,7 +6,7 @@
 #include "PlayerUtil.h"  // InventoryChangesVisitor
 
 #include "RE/Skyrim.h"
-#include "SKSE/API.h"
+
 
 namespace Helmet
 {
@@ -16,14 +16,20 @@ namespace Helmet
 		static Helmet* GetSingleton();
 
 		void Clear();
-		bool Save(SKSE::SerializationInterface* a_intfc, UInt32 a_type, UInt32 a_version);
+		bool Save(SKSE::SerializationInterface* a_intfc, UInt32 a_type, UInt32 a_version) const;
 		bool Load(SKSE::SerializationInterface* a_intfc);
 
-		RE::TESObjectARMO* GetForm();
+		[[nodiscard]] RE::TESObjectARMO* GetForm() const;
 		void SetEnchantmentForm(UInt32 a_formID);
 
-		RE::EnchantmentItem* GetEnchantmentForm();
-		UInt32 GetEnchantmentFormID();
+		[[nodiscard]] RE::EnchantmentItem* GetEnchantmentForm() const;
+		[[nodiscard]] UInt32 GetEnchantmentFormID() const;
+
+		Helmet& operator=(const Helmet&) = delete;
+		Helmet& operator=(Helmet&&) = delete;
+
+		Helmet(const Helmet&) = delete;
+		Helmet(Helmet&&) = delete;
 
 	protected:
 		class Enchantment : public ISerializableForm
@@ -32,18 +38,12 @@ namespace Helmet
 			Enchantment() = default;
 			~Enchantment() = default;
 
-			RE::EnchantmentItem* GetForm();
+			[[nodiscard]] RE::EnchantmentItem* GetForm() const;
 		};
 
 
 		Helmet() = default;
-		Helmet(const Helmet&) = delete;
-		Helmet(Helmet&&) = delete;
 		~Helmet() = default;
-
-		Helmet& operator=(const Helmet&) = delete;
-		Helmet& operator=(Helmet&&) = delete;
-
 
 		Enchantment _enchantment;
 	};
@@ -55,22 +55,22 @@ namespace Helmet
 		class HelmetEquipVisitor : public InventoryChangesVisitor
 		{
 		public:
-			virtual bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
+			bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
 		};
 
 
 		class HelmetUnEquipVisitor : public InventoryChangesVisitor
 		{
 		public:
-			virtual bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
+			bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
 		};
 
 
 		explicit HelmetTaskDelegate(bool a_equip);
 		~HelmetTaskDelegate() = default;
 
-		virtual void Run() override;
-		virtual void Dispose() override;
+		void Run() override;
+		void Dispose() override;
 
 	private:
 		bool _equip;
@@ -86,7 +86,7 @@ namespace Helmet
 			explicit Visitor(UInt32 a_formID);
 			virtual ~Visitor() = default;
 
-			virtual bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
+			bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
 
 		private:
 			UInt32 _formID;
@@ -96,8 +96,8 @@ namespace Helmet
 		explicit DelayedHelmetLocator(UInt32 a_formID);
 		~DelayedHelmetLocator() = default;
 
-		virtual void Run() override;
-		virtual void Dispose() override;
+		void Run() override;
+		void Dispose() override;
 
 	private:
 		UInt32 _formID;
@@ -107,45 +107,47 @@ namespace Helmet
 	class AnimGraphSinkDelegate : public TaskDelegate
 	{
 	public:
-		virtual void Run() override;
-		virtual void Dispose() override;
+		void Run() override;
+		void Dispose() override;
 	};
 
 
-	class TESEquipEventHandler : public RE::BSTEventSink<RE::TESEquipEvent>
+	class TESEquipEventHandler final : public RE::BSTEventSink<RE::TESEquipEvent>
 	{
 	public:
 		using EventResult = RE::BSEventNotifyControl;
 
 		static TESEquipEventHandler* GetSingleton();
-		virtual EventResult ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
+		EventResult ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
 
-	protected:
-		TESEquipEventHandler() = default;
 		TESEquipEventHandler(const TESEquipEventHandler&) = delete;
 		TESEquipEventHandler(TESEquipEventHandler&&) = delete;
-		virtual ~TESEquipEventHandler() = default;
 
 		TESEquipEventHandler& operator=(const TESEquipEventHandler&) = delete;
 		TESEquipEventHandler& operator=(TESEquipEventHandler&&) = delete;
+
+	protected:
+		TESEquipEventHandler() = default;
+		virtual ~TESEquipEventHandler() = default;
 	};
 
 
-	class BSAnimationGraphEventHandler : public RE::BSTEventSink<RE::BSAnimationGraphEvent>
+	class BSAnimationGraphEventHandler final : public RE::BSTEventSink<RE::BSAnimationGraphEvent>
 	{
 	public:
 		using EventResult = RE::BSEventNotifyControl;
 
 		static BSAnimationGraphEventHandler* GetSingleton();
-		virtual EventResult ProcessEvent(const RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource) override;
+		EventResult ProcessEvent(const RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource) override;
 
-	protected:
-		BSAnimationGraphEventHandler() = default;
 		BSAnimationGraphEventHandler(const BSAnimationGraphEventHandler&) = delete;
 		BSAnimationGraphEventHandler(BSAnimationGraphEventHandler&&) = delete;
-		virtual ~BSAnimationGraphEventHandler() = default;
 
 		BSAnimationGraphEventHandler& operator=(const BSAnimationGraphEventHandler&) = delete;
 		BSAnimationGraphEventHandler& operator=(BSAnimationGraphEventHandler&&) = delete;
+
+	protected:
+		BSAnimationGraphEventHandler() = default;
+		virtual ~BSAnimationGraphEventHandler() = default;
 	};
 }

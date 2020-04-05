@@ -6,16 +6,16 @@
 #include "Forms.h"  // WerewolfBeastRace, DLC1VampireBeastRace
 
 #include "RE/Skyrim.h"
-#include "REL/Relocation.h"
 #include "SKSE/API.h"
 
 
 namespace Helmet
 {
-	Helmet* Helmet::GetSingleton()
+	auto Helmet::GetSingleton()
+	-> Helmet*
 	{
 		static Helmet singleton;
-		return &singleton;
+		return std::addressof(singleton);
 	}
 
 
@@ -26,15 +26,15 @@ namespace Helmet
 	}
 
 
-	bool Helmet::Save(SKSE::SerializationInterface* a_intfc, UInt32 a_type, UInt32 a_version)
+	bool Helmet::Save(SKSE::SerializationInterface* a_intfc, const UInt32 a_type, const UInt32 a_version) const
 	{
 		if (!ISerializableForm::Save(a_intfc, a_type, a_version)) {
 			return false;
-		} else if (!_enchantment.Save(a_intfc)) {
-			return false;
-		} else {
-			return true;
 		}
+		if (!_enchantment.Save(a_intfc)) {
+			return false;
+		}
+		return true;
 	}
 
 
@@ -42,45 +42,48 @@ namespace Helmet
 	{
 		if (!ISerializableForm::Load(a_intfc)) {
 			return false;
-		} else if (!_enchantment.Load(a_intfc)) {
-			return false;
-		} else {
-			return true;
 		}
+		if (!_enchantment.Load(a_intfc)) {
+			return false;
+		}
+		return true;
 	}
 
 
-	RE::TESObjectARMO* Helmet::GetForm()
+	auto Helmet::GetForm() const
+	-> RE::TESObjectARMO*
 	{
 		return static_cast<RE::TESObjectARMO*>(ISerializableForm::GetForm());
 	}
 
 
-	void Helmet::SetEnchantmentForm(UInt32 a_formID)
+	void Helmet::SetEnchantmentForm(const UInt32 a_formID)
 	{
 		_enchantment.SetForm(a_formID);
 	}
 
 
-	RE::EnchantmentItem* Helmet::GetEnchantmentForm()
+	auto Helmet::GetEnchantmentForm() const
+	-> RE::EnchantmentItem*
 	{
 		return _enchantment.GetForm();
 	}
 
 
-	UInt32 Helmet::GetEnchantmentFormID()
+	UInt32 Helmet::GetEnchantmentFormID() const
 	{
 		return _enchantment.GetFormID();
 	}
 
 
-	RE::EnchantmentItem* Helmet::Enchantment::GetForm()
+	auto Helmet::Enchantment::GetForm() const
+	-> RE::EnchantmentItem*
 	{
 		return static_cast<RE::EnchantmentItem*>(ISerializableForm::GetForm());
 	}
 
 
-	HelmetTaskDelegate::HelmetTaskDelegate(bool a_equip) :
+	HelmetTaskDelegate::HelmetTaskDelegate(const bool a_equip) :
 		_equip(a_equip)
 	{}
 
@@ -103,24 +106,24 @@ namespace Helmet
 	}
 
 
-	DelayedHelmetLocator::Visitor::Visitor(UInt32 a_formID) :
+	DelayedHelmetLocator::Visitor::Visitor(const UInt32 a_formID) :
 		_formID(a_formID)
 	{}
 
 
 	bool HelmetTaskDelegate::HelmetEquipVisitor::Accept(RE::InventoryEntryData* a_entry, SInt32 a_count)
 	{
-		auto helmet = Helmet::GetSingleton();
+		const auto helmet = Helmet::GetSingleton();
 		if (a_entry->GetObject()->GetFormID() == helmet->GetFormID()) {
-			auto armor = static_cast<RE::TESObjectARMO*>(a_entry->GetObject());
-			auto enchantment = helmet->GetEnchantmentForm();
+			const auto armor = static_cast<RE::TESObjectARMO*>(a_entry->GetObject());
+			const auto enchantment = helmet->GetEnchantmentForm();
 			if (enchantment) {
 				if (!a_entry->extraLists) {
 					return true;
 				}
-				bool found = false;
+				auto found = false;
 				for (auto& xList : *a_entry->extraLists) {
-					auto xEnch = xList->GetByType<RE::ExtraEnchantment>();
+					const auto xEnch = xList->GetByType<RE::ExtraEnchantment>();
 					if (xEnch && xEnch->enchantment && xEnch->enchantment->GetFormID() == enchantment->GetFormID()) {
 						found = true;
 						break;
@@ -131,9 +134,9 @@ namespace Helmet
 				}
 			}
 			auto equipManager = RE::ActorEquipManager::GetSingleton();
-			auto player = RE::PlayerCharacter::GetSingleton();
-			auto xList = (a_entry->extraLists && !a_entry->extraLists->empty()) ? a_entry->extraLists->front() : 0;
-			equipManager->EquipObject(player, armor, xList, 1, armor->GetEquipSlot(), true, false, false);
+			const auto player = RE::PlayerCharacter::GetSingleton();
+			const auto xList = (a_entry->extraLists && !a_entry->extraLists->empty()) ? a_entry->extraLists->front() : nullptr;
+			equipManager->EquipObject(player, armor, xList, 1, armor->equipSlot, true, false, false);
 			return false;
 		}
 		return true;
@@ -147,11 +150,11 @@ namespace Helmet
 		if (a_entry->GetObject() && a_entry->GetObject()->Is(RE::FormType::Armor) && a_entry->extraLists) {
 			for (auto& xList : *a_entry->extraLists) {
 				if (xList->HasType(RE::ExtraDataType::kWorn)) {
-					auto armor = static_cast<RE::TESObjectARMO*>(a_entry->GetObject());
-					if (armor->HasPartOf(FirstPersonFlag::kHair) && (armor->IsLightArmor() || armor->IsHeavyArmor())) {
+					const auto armor = static_cast<RE::TESObjectARMO*>(a_entry->GetObject());
+					if (armor->HasPartOf(FirstPersonFlag::kHair) && (armor->IsLightArmor() || armor->IsHeavyArmor() || armor->IsClothing())) {
 						auto equipManager = RE::ActorEquipManager::GetSingleton();
-						auto player = RE::PlayerCharacter::GetSingleton();
-						equipManager->UnequipObject(player, armor, xList, 1, armor->GetEquipSlot(), true, false);
+						const auto player = RE::PlayerCharacter::GetSingleton();
+						equipManager->UnequipObject(player, armor, xList, 1, armor->equipSlot, true, false);
 						return false;
 					}
 				}
@@ -161,7 +164,7 @@ namespace Helmet
 	}
 
 
-	DelayedHelmetLocator::DelayedHelmetLocator(UInt32 a_formID) :
+	DelayedHelmetLocator::DelayedHelmetLocator(const UInt32 a_formID) :
 		_formID(a_formID)
 	{}
 
@@ -190,7 +193,7 @@ namespace Helmet
 					auto armor = static_cast<RE::TESObjectARMO*>(a_entry->GetObject());
 					for (auto& xList : *a_entry->extraLists) {
 						if (xList->HasType(RE::ExtraDataType::kEnchantment)) {
-							auto ench = xList->GetByType<RE::ExtraEnchantment>();
+							const auto ench = xList->GetByType<RE::ExtraEnchantment>();
 							if (ench && ench->enchantment) {
 								helmet->SetEnchantmentForm(ench->enchantment->GetFormID());
 							}
@@ -206,7 +209,7 @@ namespace Helmet
 
 	void AnimGraphSinkDelegate::Run()
 	{
-		SinkAnimationGraphEventHandler(BSAnimationGraphEventHandler::GetSingleton());
+		AnimationGraphEventHandler(BSAnimationGraphEventHandler::GetSingleton());
 	}
 
 
@@ -216,15 +219,16 @@ namespace Helmet
 	}
 
 
-	TESEquipEventHandler* TESEquipEventHandler::GetSingleton()
+	auto TESEquipEventHandler::GetSingleton()
+	-> TESEquipEventHandler*
 	{
 		static TESEquipEventHandler singleton;
-		return &singleton;
+		return std::addressof(singleton);
 	}
 
 
 	auto TESEquipEventHandler::ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource)
-		-> EventResult
+	-> EventResult
 	{
 		using FirstPersonFlag = RE::BGSBipedObjectForm::FirstPersonFlag;
 
@@ -232,18 +236,18 @@ namespace Helmet
 			return EventResult::kContinue;
 		}
 
-		auto armor = RE::TESForm::LookupByID<RE::TESObjectARMO>(a_event->baseObject);
+		const auto armor = RE::TESForm::LookupByID<RE::TESObjectARMO>(a_event->baseObject);
 		if (!armor) {
 			return EventResult::kContinue;
 		}
 
 		if (armor->HasPartOf(FirstPersonFlag::kHead | FirstPersonFlag::kHair | FirstPersonFlag::kCirclet)) {
 			auto helmet = Helmet::GetSingleton();
-			if (armor->IsLightArmor() || armor->IsHeavyArmor()) {
+			if (armor->IsLightArmor() || armor->IsHeavyArmor() || armor->IsClothing()) {
 				if (a_event->equipped) {
 					SKSE::GetTaskInterface()->AddTask(new DelayedHelmetLocator(armor->GetFormID()));
 				} else {
-					auto player = RE::PlayerCharacter::GetSingleton();
+					const auto player = RE::PlayerCharacter::GetSingleton();
 					if (player->IsWeaponDrawn()) {
 						helmet->Clear();
 					}
@@ -260,32 +264,39 @@ namespace Helmet
 	BSAnimationGraphEventHandler* BSAnimationGraphEventHandler::GetSingleton()
 	{
 		static BSAnimationGraphEventHandler singleton;
-		return &singleton;
+		return std::addressof(singleton);
 	}
 
 
 	auto BSAnimationGraphEventHandler::ProcessEvent(const RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource)
-		-> EventResult
+	-> EventResult
 	{
 		if (!a_event || !a_event->holder || !a_event->holder->IsPlayerRef()) {
 			return EventResult::kContinue;
 		}
 
-		auto task = SKSE::GetTaskInterface();
+		const auto task = SKSE::GetTaskInterface();
 		switch (HashAnimation(a_event->tag)) {
 		case Anim::kWeaponDraw:
-			if (!PlayerIsBeastRace()) {
-				task->AddTask(new HelmetTaskDelegate(true));
+			{
+				if (!PlayerIsBeastRace()) {
+					task->AddTask(new HelmetTaskDelegate(true));
+				}
+				break;
 			}
-			break;
 		case Anim::kWeaponSheathe:
-			if (!PlayerIsBeastRace()) {
-				task->AddTask(new HelmetTaskDelegate(false));
+			{
+				if (!PlayerIsBeastRace()) {
+					task->AddTask(new HelmetTaskDelegate(false));
+				}
+				break;
 			}
-			break;
 		case Anim::kGraphDeleting:
-			task->AddTask(new AnimGraphSinkDelegate());
-			break;
+			{
+				task->AddTask(new AnimGraphSinkDelegate());
+				break;
+			}
+		default: ;
 		}
 
 		return EventResult::kContinue;

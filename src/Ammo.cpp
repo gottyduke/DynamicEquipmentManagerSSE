@@ -8,23 +8,73 @@
 
 namespace Ammo
 {
-	Ammo* Ammo::GetSingleton()
+	auto Ammo::GetSingleton()
+	-> Ammo*
 	{
 		static Ammo singleton;
-		return &singleton;
+		return std::addressof(singleton);
 	}
 
 
-	RE::TESAmmo* Ammo::GetForm()
+	auto Ammo::GetForm() const
+	-> RE::TESAmmo*
 	{
 		return static_cast<RE::TESAmmo*>(ISerializableForm::GetForm());
+	}
+
+
+	void DelayedAmmoTaskDelegate::Run()
+	{
+		if (g_equippedAmmoFormID != kInvalid) {
+			const auto ammo = RE::TESForm::LookupByID<RE::TESAmmo>(g_equippedAmmoFormID);
+			if (!ammo->HasKeyword(WeapTypeBoundArrow)) {
+				if (g_equippedWeaponFormID == kInvalid) {
+					Ammo::GetSingleton()->SetForm(g_equippedAmmoFormID);
+				} else {
+					// Ammo was force equipped
+					Visitor visitor;
+					VisitPlayerInventoryChanges(&visitor);
+				}
+			}
+			g_equippedAmmoFormID = kInvalid;
+		}
+	}
+
+
+	void DelayedAmmoTaskDelegate::Dispose()
+	{
+		delete this;
+	}
+
+
+	bool DelayedAmmoTaskDelegate::Visitor::Accept(RE::InventoryEntryData* a_entry, const SInt32 a_count)
+	{
+		if (a_entry->GetObject()->GetFormID() == g_equippedAmmoFormID && a_entry->extraLists) {
+			for (auto& xList : *a_entry->extraLists) {
+				if (xList->HasType(RE::ExtraDataType::kWorn) || xList->HasType(RE::ExtraDataType::kWornLeft)) {
+					auto equipManager = RE::ActorEquipManager::GetSingleton();
+					const auto player = RE::PlayerCharacter::GetSingleton();
+					equipManager->UnequipObject(player, a_entry->GetObject(), xList, a_count, nullptr, true, false);
+
+					auto ui = RE::UI::GetSingleton();
+					const auto uiStr = RE::InterfaceStrings::GetSingleton();
+					auto invMenu = ui->GetMenu<RE::InventoryMenu>(uiStr->inventoryMenu);
+					if (invMenu && invMenu->InventoryItemMenu()) {
+						invMenu->itemList->Update(player);
+					}
+
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 
 	void DelayedWeaponTaskDelegate::Run()
 	{
 		if (g_equippedWeaponFormID != kInvalid) {
-			auto weap = RE::TESForm::LookupByID<RE::TESObjectWEAP>(g_equippedWeaponFormID);
+			const auto weap = RE::TESForm::LookupByID<RE::TESObjectWEAP>(g_equippedWeaponFormID);
 
 			if ((!weap->IsBow() && !weap->IsCrossbow()) || weap->IsBound()) {
 				g_equippedWeaponFormID = kInvalid;
@@ -34,14 +84,14 @@ namespace Ammo
 			Visitor visitor;
 			VisitPlayerInventoryChanges(&visitor);
 
-			auto ammo = Ammo::GetSingleton()->GetForm();
+			const auto ammo = Ammo::GetSingleton()->GetForm();
 			if (ammo) {
 				auto equipManager = RE::ActorEquipManager::GetSingleton();
-				auto player = RE::PlayerCharacter::GetSingleton();
-				equipManager->EquipObject(player, ammo, 0, visitor.Count(), 0, true, false, false);
+				const auto player = RE::PlayerCharacter::GetSingleton();
+				equipManager->EquipObject(player, ammo, nullptr, visitor.Count(), nullptr, true, false, false);
 
 				auto ui = RE::UI::GetSingleton();
-				auto uiStr = RE::InterfaceStrings::GetSingleton();
+				const auto uiStr = RE::InterfaceStrings::GetSingleton();
 				auto invMenu = ui->GetMenu<RE::InventoryMenu>(uiStr->inventoryMenu);
 				if (invMenu && invMenu->InventoryItemMenu()) {
 					invMenu->itemList->Update(player);
@@ -64,7 +114,7 @@ namespace Ammo
 	{}
 
 
-	bool DelayedWeaponTaskDelegate::Visitor::Accept(RE::InventoryEntryData* a_entry, SInt32 a_count)
+	bool DelayedWeaponTaskDelegate::Visitor::Accept(RE::InventoryEntryData* a_entry, const SInt32 a_count)
 	{
 		if (a_entry->GetObject()->IsAmmo()) {
 			if (a_entry->GetObject()->GetFormID() == Ammo::GetSingleton()->GetFormID()) {
@@ -76,98 +126,52 @@ namespace Ammo
 	}
 
 
-	SInt32 DelayedWeaponTaskDelegate::Visitor::Count() const
+	auto DelayedWeaponTaskDelegate::Visitor::Count() const
+	-> SInt32
 	{
 		return _count;
 	}
 
 
-	bool DelayedAmmoTaskDelegate::Visitor::Accept(RE::InventoryEntryData* a_entry, SInt32 a_count)
-	{
-		if (a_entry->GetObject()->GetFormID() == g_equippedAmmoFormID && a_entry->extraLists) {
-			for (auto& xList : *a_entry->extraLists) {
-				if (xList->HasType(RE::ExtraDataType::kWorn) || xList->HasType(RE::ExtraDataType::kWornLeft)) {
-					auto equipManager = RE::ActorEquipManager::GetSingleton();
-					auto player = RE::PlayerCharacter::GetSingleton();
-					equipManager->UnequipObject(player, a_entry->GetObject(), xList, a_count, 0, true, false);
-
-					auto ui = RE::UI::GetSingleton();
-					auto uiStr = RE::InterfaceStrings::GetSingleton();
-					auto invMenu = ui->GetMenu<RE::InventoryMenu>(uiStr->inventoryMenu);
-					if (invMenu && invMenu->InventoryItemMenu()) {
-						invMenu->itemList->Update(player);
-					}
-
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-
-
-	void DelayedAmmoTaskDelegate::Run()
-	{
-		if (g_equippedAmmoFormID != kInvalid) {
-			RE::TESAmmo* ammo = RE::TESForm::LookupByID<RE::TESAmmo>(g_equippedAmmoFormID);
-			if (!ammo->HasKeyword(WeapTypeBoundArrow)) {
-				if (g_equippedWeaponFormID == kInvalid) {
-					Ammo::GetSingleton()->SetForm(g_equippedAmmoFormID);
-				} else {
-					// Ammo was force equipped
-					Visitor visitor;
-					VisitPlayerInventoryChanges(&visitor);
-				}
-			}
-			g_equippedAmmoFormID = kInvalid;
-		}
-	}
-
-
-	void DelayedAmmoTaskDelegate::Dispose()
-	{
-		delete this;
-	}
-
-
-	bool TESEquipEventHandler::Visitor::Accept(RE::InventoryEntryData* a_entry, SInt32 a_count)
+	bool TESEquipEventHandler::Visitor::Accept(RE::InventoryEntryData* a_entry, const SInt32 a_count)
 	{
 		if (a_entry->GetObject()->GetFormID() == Ammo::GetSingleton()->GetFormID() && a_entry->extraLists) {
 			auto equipManager = RE::ActorEquipManager::GetSingleton();
-			auto player = RE::PlayerCharacter::GetSingleton();
-			auto xList = a_entry->extraLists->empty() ? 0 : a_entry->extraLists->front();
-			equipManager->UnequipObject(player, a_entry->GetObject(), xList, a_count, 0, true, false);
+			const auto player = RE::PlayerCharacter::GetSingleton();
+			const auto xList = a_entry->extraLists->empty() ? nullptr : a_entry->extraLists->front();
+			equipManager->UnequipObject(player, a_entry->GetObject(), xList, a_count, nullptr, true, false);
 			return false;
 		}
 		return true;
 	}
 
 
-	TESEquipEventHandler* TESEquipEventHandler::GetSingleton()
+	auto TESEquipEventHandler::GetSingleton()
+	-> TESEquipEventHandler*
 	{
 		static TESEquipEventHandler singleton;
-		return &singleton;
+		return std::addressof(singleton);
 	}
 
 
 	auto TESEquipEventHandler::ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource)
-		-> EventResult
+	-> EventResult
 	{
 		if (!a_event || !a_event->actor || !a_event->actor->IsPlayerRef() || PlayerIsBeastRace()) {
 			return EventResult::kContinue;
 		}
 
-		auto form = RE::TESForm::LookupByID(a_event->baseObject);
+		const auto form = RE::TESForm::LookupByID(a_event->baseObject);
 		if (!form) {
 			return EventResult::kContinue;
 		}
 
-		auto task = SKSE::GetTaskInterface();
+		const auto task = SKSE::GetTaskInterface();
 		switch (form->GetFormType()) {
 		case RE::FormType::Weapon:
 			if (a_event->equipped) {
 				g_equippedWeaponFormID = form->GetFormID();
-				task->AddTask(new DelayedAmmoTaskDelegate());
+				task->AddTask(new DelayedWeaponTaskDelegate());
 			} else {
 				Visitor visitor;
 				VisitPlayerInventoryChanges(&visitor);
@@ -179,6 +183,7 @@ namespace Ammo
 				task->AddTask(new DelayedAmmoTaskDelegate());
 			}
 			break;
+		default: ;
 		}
 		return EventResult::kContinue;
 	}

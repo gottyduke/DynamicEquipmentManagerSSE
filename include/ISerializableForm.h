@@ -25,12 +25,12 @@ public:
 	ISerializableForm& operator=(ISerializableForm&&) = default;
 
 	void Clear();
-	bool Save(SKSE::SerializationInterface* a_intfc, UInt32 a_type, UInt32 a_version);
-	bool Save(SKSE::SerializationInterface* a_intfc);
+	bool Save(SKSE::SerializationInterface* a_intfc, UInt32 a_type, UInt32 a_version) const;
+	bool Save(SKSE::SerializationInterface* a_intfc) const;
 	bool Load(SKSE::SerializationInterface* a_intfc);
 	void SetForm(UInt32 a_formID);
-	RE::TESForm* GetForm();
-	UInt32 GetFormID();
+	[[nodiscard]] RE::TESForm* GetForm() const;
+	[[nodiscard]] UInt32 GetFormID() const;
 
 protected:
 	UInt32 _formID;

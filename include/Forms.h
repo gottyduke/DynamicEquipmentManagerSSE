@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 
 #include "RE/Skyrim.h"
 
@@ -23,27 +24,28 @@ public:
 	enum : UInt32 { kInvalid = static_cast<UInt32>(-1) };
 
 
-	Form(UInt32 a_rawFormID, std::string a_pluginName) :
+	Form(const UInt32 a_rawFormID, std::string a_pluginName) :
 		_rawFormID(a_rawFormID),
 		_loadedFormID(kInvalid),
-		_pluginName(a_pluginName)
+		_pluginName(std::move(a_pluginName))
 	{}
 
 
+	// can't use explicit here
 	operator T*()
 	{
 		if (_rawFormID == kInvalid) {
-			return 0;
+			return nullptr;
 		}
 
 		if (_loadedFormID == kInvalid) {
 			auto dataHandler = RE::TESDataHandler::GetSingleton();
-			auto modInfo = dataHandler->LookupLoadedModByName(_pluginName.c_str());
+			const auto modInfo = dataHandler->LookupLoadedModByName(_pluginName.c_str());
 			if (modInfo) {
 				_loadedFormID = _rawFormID + (modInfo->compileIndex << (3 * 8));
 			} else {
 				_rawFormID = kInvalid;
-				return 0;
+				return nullptr;
 			}
 		}
 
@@ -51,12 +53,12 @@ public:
 	}
 
 private:
-	UInt32		_rawFormID;
-	UInt32		_loadedFormID;
-	std::string	_pluginName;
+	UInt32 _rawFormID;
+	UInt32 _loadedFormID;
+	std::string _pluginName;
 };
 
 
-extern Form<RE::BGSKeyword>	WeapTypeBoundArrow;
-extern Form<RE::TESRace>	WerewolfBeastRace;
-extern Form<RE::TESRace>	DLC1VampireBeastRace;
+extern Form<RE::BGSKeyword> WeapTypeBoundArrow;
+extern Form<RE::TESRace> WerewolfBeastRace;
+extern Form<RE::TESRace> DLC1VampireBeastRace;

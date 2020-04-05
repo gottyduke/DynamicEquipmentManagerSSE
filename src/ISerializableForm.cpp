@@ -15,18 +15,17 @@ void ISerializableForm::Clear()
 }
 
 
-bool ISerializableForm::Save(SKSE::SerializationInterface* a_intfc, UInt32 a_type, UInt32 a_version)
+bool ISerializableForm::Save(SKSE::SerializationInterface* a_intfc, const UInt32 a_type, const UInt32 a_version) const
 {
 	if (!a_intfc->OpenRecord(a_type, a_version)) {
 		_ERROR("Failed to open serialization record!\n");
 		return false;
-	} else {
-		return Save(a_intfc);
 	}
+	return Save(a_intfc);
 }
 
 
-bool ISerializableForm::Save(SKSE::SerializationInterface* a_intfc)
+bool ISerializableForm::Save(SKSE::SerializationInterface* a_intfc) const
 {
 	a_intfc->WriteRecordData(&_formID, sizeof(_formID));
 
@@ -47,19 +46,19 @@ bool ISerializableForm::Load(SKSE::SerializationInterface* a_intfc)
 }
 
 
-void ISerializableForm::SetForm(UInt32 a_formID)
+void ISerializableForm::SetForm(const UInt32 a_formID)
 {
 	_formID = a_formID;
 }
 
 
-RE::TESForm* ISerializableForm::GetForm()
+RE::TESForm* ISerializableForm::GetForm() const
 {
-	return _formID == kInvalid ? 0 : RE::TESForm::LookupByID(_formID);
+	return _formID == kInvalid ? nullptr : RE::TESForm::LookupByID(_formID);
 }
 
 
-UInt32 ISerializableForm::GetFormID()
+UInt32 ISerializableForm::GetFormID() const
 {
 	return _formID;
 }

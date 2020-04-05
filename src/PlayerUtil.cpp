@@ -12,8 +12,8 @@
 
 void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
 {
-	auto player = RE::PlayerCharacter::GetSingleton();
-	auto changes = player->GetInventoryChanges();
+	const auto player = RE::PlayerCharacter::GetSingleton();
+	const auto changes = player->GetInventoryChanges();
 	std::map<FormID, std::pair<RE::InventoryEntryData*, Count>> invMap;
 	if (changes) {
 		for (auto& entry : *changes->entryList) {
@@ -23,26 +23,25 @@ void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
 		}
 	}
 
-	auto container = player->GetContainer();
+	const auto container = player->GetContainer();
 	std::vector<RE::InventoryEntryData*> heapList;
 	if (container) {
 		container->ForEachContainerObject([&](RE::ContainerObject* a_cnto) -> bool
-			{
-				if (a_cnto->obj) {
-					auto& it = invMap.find(a_cnto->obj->GetFormID());
-					if (it != invMap.end()) {
-						if (!a_cnto->obj->IsGold()) {
-							it->second.second += a_cnto->count;
-						}
+		{
+			if (a_cnto->obj) {
+				auto& it = invMap.find(a_cnto->obj->GetFormID());
+				if (it != invMap.end()) {
+					if (!a_cnto->obj->IsGold()) {
+						it->second.second += a_cnto->count;
 					}
-					else {
-						RE::InventoryEntryData* entryData = new RE::InventoryEntryData(a_cnto->obj, a_cnto->count);
-						heapList.push_back(entryData);
-						invMap.emplace(a_cnto->obj->GetFormID(), std::make_pair(entryData, entryData->countDelta));
-					}
+				} else {
+					auto entryData = new RE::InventoryEntryData(a_cnto->obj, a_cnto->count);
+					heapList.push_back(entryData);
+					invMap.emplace(a_cnto->obj->GetFormID(), std::make_pair(entryData, entryData->countDelta));
 				}
-				return true;
-			});
+			}
+			return true;
+		});
 	}
 
 	for (auto& item : invMap) {
@@ -59,18 +58,19 @@ void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
 }
 
 
-bool SinkAnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>* a_sink)
+bool AnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>* a_sink)
 {
-	auto player = RE::PlayerCharacter::GetSingleton();
+	const auto player = RE::PlayerCharacter::GetSingleton();
 	RE::BSAnimationGraphManagerPtr graphManager;
 	player->GetAnimationGraphManager(graphManager);
 	if (graphManager) {
-		bool sinked = false;
+		auto sinked = false;
 		for (auto& animationGraph : graphManager->graphs) {
 			if (sinked) {
 				break;
 			}
-			RE::BSTEventSource<RE::BSAnimationGraphEvent>* eventSource = animationGraph->GetEventSource<RE::BSAnimationGraphEvent>();
+
+			auto eventSource = animationGraph->GetEventSource<RE::BSAnimationGraphEvent>();
 			for (auto& sink : eventSource->sinks) {
 				if (sink == a_sink) {
 					sinked = true;
@@ -78,6 +78,7 @@ bool SinkAnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>*
 				}
 			}
 		}
+
 		if (!sinked) {
 			graphManager->graphs.front()->GetEventSource<RE::BSAnimationGraphEvent>()->AddEventSink(a_sink);
 			return true;
@@ -89,7 +90,7 @@ bool SinkAnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>*
 
 bool PlayerIsBeastRace()
 {
-	auto player = RE::PlayerCharacter::GetSingleton();
-	auto race = player->GetRace();
+	const auto player = RE::PlayerCharacter::GetSingleton();
+	const auto race = player->GetRace();
 	return race == WerewolfBeastRace || race == DLC1VampireBeastRace;
 }

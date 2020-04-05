@@ -8,6 +8,7 @@
 #include "RE/Skyrim.h"
 #include "SKSE/API.h"
 
+
 namespace Ammo
 {
 	class Ammo : public ISerializableForm
@@ -15,80 +16,81 @@ namespace Ammo
 	public:
 		static Ammo* GetSingleton();
 
-		RE::TESAmmo* GetForm();
+		[[nodiscard]] RE::TESAmmo* GetForm() const;
 
-	protected:
-		Ammo() = default;
 		Ammo(const Ammo&) = delete;
 		Ammo(Ammo&&) = delete;
-		~Ammo() = default;
 
 		Ammo& operator=(const Ammo&) = delete;
 		Ammo& operator=(Ammo&&) = delete;
+
+	protected:
+		Ammo() = default;
+		~Ammo() = default;
 	};
 
 
-	class DelayedWeaponTaskDelegate : public TaskDelegate
+	class DelayedWeaponTaskDelegate final : public TaskDelegate
 	{
 	public:
-		class Visitor : public InventoryChangesVisitor
+		class Visitor final : public InventoryChangesVisitor
 		{
 		public:
 			Visitor();
-			virtual ~Visitor() = default;
 
-			virtual bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
-			SInt32 Count() const;
+			bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
+			[[nodiscard]] SInt32 Count() const;
 
 		private:
 			SInt32 _count;
 		};
 
 
-		virtual void Run() override;
-		virtual void Dispose() override;
+		void Run() override;
+		void Dispose() override;
 	};
 
 
 	class DelayedAmmoTaskDelegate : public TaskDelegate
 	{
 	public:
-		class Visitor : public InventoryChangesVisitor
+		class Visitor final : public InventoryChangesVisitor
 		{
 		public:
-			virtual bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
+			bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
 		};
 
 
-		virtual void Run() override;
-		virtual void Dispose() override;
+		void Run() override;
+		void Dispose() override;
 	};
 
 
-	class TESEquipEventHandler : public RE::BSTEventSink<RE::TESEquipEvent>
+	class TESEquipEventHandler final : public RE::BSTEventSink<RE::TESEquipEvent>
 	{
 	public:
 		using EventResult = RE::BSEventNotifyControl;
 
 
-		class Visitor : public InventoryChangesVisitor
+		class Visitor final : public InventoryChangesVisitor
 		{
 		public:
-			virtual bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
+			bool Accept(RE::InventoryEntryData* a_entry, SInt32 a_count) override;
 		};
 
 
 		static TESEquipEventHandler* GetSingleton();
-		virtual EventResult ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
+		EventResult ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
 
-	protected:
-		TESEquipEventHandler() = default;
 		TESEquipEventHandler(const TESEquipEventHandler&) = delete;
 		TESEquipEventHandler(TESEquipEventHandler&&) = delete;
-		virtual ~TESEquipEventHandler() = default;
 
 		TESEquipEventHandler& operator=(const TESEquipEventHandler&) = delete;
 		TESEquipEventHandler& operator=(TESEquipEventHandler&&) = delete;
+
+	protected:
+		TESEquipEventHandler() = default;
+		virtual ~TESEquipEventHandler() = default;
 	};
 
 

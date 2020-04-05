@@ -7,7 +7,7 @@
 #include "RE/Skyrim.h"
 
 
-Anim HashAnimation(const char* a_str, std::uint32_t a_len)
+Anim HashAnimation(const char* a_str, const std::uint32_t a_len)
 {
 	return Anim(hash_64_fnv1a(a_str, a_len));
 }

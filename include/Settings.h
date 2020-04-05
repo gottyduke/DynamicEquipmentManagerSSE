@@ -11,9 +11,9 @@ public:
 
 	static bool LoadSettings(bool a_dumpParse = false);
 
-	static J2S::bSetting	manageAmmo;
-	static J2S::bSetting	manageHelmet;
-	static J2S::bSetting	manageShield;
+	static J2S::bSetting manageAmmo;
+	static J2S::bSetting manageHelmet;
+	static J2S::bSetting manageShield;
 
 private:
 	static inline constexpr char FILE_NAME[] = "Data\\SKSE\\Plugins\\DynamicEquipmentManagerSSE.json";
