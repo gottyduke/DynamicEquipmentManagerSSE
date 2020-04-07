@@ -14,7 +14,8 @@ public:
 	static J2S::bSetting manageAmmo;
 	static J2S::bSetting manageHelmet;
 	static J2S::bSetting manageShield;
-
+	static J2S::bSetting ignoreHood;
+	
 private:
 	static inline constexpr char FILE_NAME[] = "Data\\SKSE\\Plugins\\DynamicEquipmentManagerSSE.json";
 };
