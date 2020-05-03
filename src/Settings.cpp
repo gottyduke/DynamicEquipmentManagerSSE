@@ -11,6 +11,7 @@ bool Settings::LoadSettings(bool a_dumpParse)
 }
 
 
-decltype(Settings::manageAmmo) Settings::manageAmmo("manageAmmo", true);
-decltype(Settings::manageHelmet) Settings::manageHelmet("manageHelmet", true);
-decltype(Settings::manageShield) Settings::manageShield("manageShield", true);
+decltype(Settings::manageAmmo)		Settings::manageAmmo("manageAmmo", true);
+decltype(Settings::manageHelmet)	Settings::manageHelmet("manageHelmet", true);
+decltype(Settings::manageShield)	Settings::manageShield("manageShield", true);
+decltype(Settings::ignoreHood)		Settings::ignoreHood("ignoreHood", true);

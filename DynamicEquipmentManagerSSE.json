@@ -1,5 +1,6 @@
 {
 	"manageAmmo": true,
 	"manageHelmet": true,
-	"manageShield": true
+	"manageShield": true,
+	"ignoreHood":  true
 }

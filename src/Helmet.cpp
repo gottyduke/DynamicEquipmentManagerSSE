@@ -4,6 +4,7 @@
 
 #include "Animations.h"  // Anim, HashAnimation
 #include "Forms.h"  // WerewolfBeastRace, DLC1VampireBeastRace
+#include "Settings.h"
 
 #include "RE/Skyrim.h"
 #include "SKSE/API.h"
@@ -151,7 +152,7 @@ namespace Helmet
 			for (auto& xList : *a_entry->extraLists) {
 				if (xList->HasType(RE::ExtraDataType::kWorn)) {
 					const auto armor = static_cast<RE::TESObjectARMO*>(a_entry->GetObject());
-					if (armor->HasPartOf(FirstPersonFlag::kHair) && (armor->IsLightArmor() || armor->IsHeavyArmor() || armor->IsClothing())) {
+					if (armor->HasPartOf(FirstPersonFlag::kHair) && (armor->IsLightArmor() || armor->IsHeavyArmor() || (!*Settings::ignoreHood && armor->IsClothing()))) {
 						auto equipManager = RE::ActorEquipManager::GetSingleton();
 						const auto player = RE::PlayerCharacter::GetSingleton();
 						equipManager->UnequipObject(player, armor, xList, 1, armor->equipSlot, true, false);
@@ -243,7 +244,7 @@ namespace Helmet
 
 		if (armor->HasPartOf(FirstPersonFlag::kHead | FirstPersonFlag::kHair | FirstPersonFlag::kCirclet)) {
 			auto helmet = Helmet::GetSingleton();
-			if (armor->IsLightArmor() || armor->IsHeavyArmor() || armor->IsClothing()) {
+			if (armor->IsLightArmor() || armor->IsHeavyArmor() || (!*Settings::ignoreHood && armor->IsClothing())) {
 				if (a_event->equipped) {
 					SKSE::GetTaskInterface()->AddTask(new DelayedHelmetLocator(armor->GetFormID()));
 				} else {
